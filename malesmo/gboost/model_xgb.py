@@ -17,22 +17,22 @@ class ModelXGB(ArrayModelBase):
         self.model = None
         super(ModelXGB, self).__init__(params=params, **kwargs)
 
-    def fit(self, X, Y):
+    def fit(self, X, Y, **kwargs):
         """
         :param X: list or iterator of dicts with features {feat1: v1, feat2: v2, ...}
         :param Y: list of labels
         """
-        X, Y, data_shape = super(ModelXGB, self).fit(X=X, Y=Y)
+        X, Y, data_shape = super(ModelXGB, self).fit(X=X, Y=Y, **kwargs)
         data = self.np_array(X, data_shape, low_memory=self.low_memory)
         dtrain = xgb.DMatrix(data=pd.DataFrame(data).values, label=np.array(list(Y)), missing=np.nan)
         self.model = xgb.train(params=self.params, dtrain=dtrain)
 
-    def predict(self, X):
+    def predict(self, X, **kwargs):
         """
         :param X: list or iterator of dicts with features {feat1: v1, feat2: v2, ...}
         :return: list of dicts with labels scores
         """
-        X, data_shape = super(ModelXGB, self).predict(X=X)
+        X, data_shape = super(ModelXGB, self).predict(X=X, **kwargs)
         data = self.np_array(X, data_shape)
         dpred = xgb.DMatrix(data=pd.DataFrame(data).values, missing=np.nan)
         return list(map(lambda p: dict((self.labels[i], p[i]) for i in range(len(p))),

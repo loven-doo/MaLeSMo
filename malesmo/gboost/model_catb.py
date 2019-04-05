@@ -1,6 +1,7 @@
 import os
 import dill
 from copy import deepcopy
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -18,20 +19,28 @@ class ModelCatBoost(ArrayModelBase):
         self.cat_features = set()
         super(ModelCatBoost, self).__init__(params=params, **kwargs)
 
-    def fit(self, X, Y):
+    def fit(self, X, Y, **kwargs):
+        """
+        :param X: list or iterator of dicts with features {feat1: v1, feat2: v2, ...}
+        :param Y: list of labels
+        """
         X = self.get_cat_features(X=X)
         print("got categorial features")
-        X, Y, data_shape = super(ModelCatBoost, self).fit(X=X, Y=Y)
+        X, Y, data_shape = super(ModelCatBoost, self).fit(X=X, Y=Y, **kwargs)
         print("got features array shape")
         data = self.np_array(X, data_shape, low_memory=self.low_memory)
         self.model.fit(X=pd.DataFrame(data).values,
                        y=np.array(list(Y)),
                        cat_features=sorted([self._features[feat] for feat in self.cat_features]))
 
-    def predict(self, X):
+    def predict(self, X, **kwargs):
+        """
+        :param X: list or iterator of dicts with features {feat1: v1, feat2: v2, ...}
+        :return: list of dicts with labels scores
+        """
         X = self.get_cat_features(X=X)
         print("got categorial features")
-        X, data_shape = super(ModelCatBoost, self).predict(X=X)
+        X, data_shape = super(ModelCatBoost, self).predict(X=X, **kwargs)
         print("got features array shape")
         data = self.np_array(X, data_shape)
         # self._labels["diagnosis_source_code"] = 15###

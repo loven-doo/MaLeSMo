@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='MaLeSMo',
-    version='0.1.0',
+    version='0.1.2',
     author="Denis Moshensky",
     author_email="loven7doo@gmail.com",  
     description="Machine Learning Standard Models",
@@ -23,7 +23,8 @@ setup(
         'numpy >= 1.15.1',
         'pandas >= 0.23.4',
         'scipy >= 1.1.0',
-        'malemba >= 0.4.4',
+        'dill >= 0.2.9',
+        'malemba >= 0.4.5',
     ],
     entry_points={
         'console_scripts': []
