@@ -19,10 +19,10 @@ pip install git+https://github.com/loven-doo/MaLeSMo.git
 For 'dev' branch version:
 
 ```
-pip install git+https://github.com/loven-doo/MaLeMBa.git@dev
+pip install git+https://github.com/loven-doo/MaLeSMo.git@dev
 ```
 
 ## Package reference
 
-###gboost
+### gboost
 
