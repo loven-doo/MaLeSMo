@@ -25,13 +25,16 @@ class ModelDualBoost(ModelBase):
         self._model1_class = self.model1.__class__
         self._model2_class = self.model2.__class__
         self.concat_method = concat_method
+        if not callable(concat_method):
+            raise (TypeError, "Error: a value for 'concat_method' argument must be a function")
         self.params1 = params1
         self.params2 = params2
         super(ModelDualBoost, self).__init__(params=None, **kwargs)
+        self.aggr_level = kwargs.get("aggr_level", 0)
         self._data_l = 0
         self._model1_fract = 0.0
 
-    def fit(self, X, Y, model1_fract=0.0, aggr_level=0, dump_scheme_path=None, **kwargs):
+    def fit(self, X, Y, model1_fract=0.0, aggr_level=None, dump_scheme_path=None, **kwargs):
         """
 
         :param X: features data
@@ -44,6 +47,9 @@ class ModelDualBoost(ModelBase):
         """
         super(ModelDualBoost, self).fit(X=X, Y=Y, **kwargs)
 
+        if aggr_level is not None:
+            self.aggr_level = aggr_level
+
         if model1_fract > 0.0:
             self._model1_fract = model1_fract
             self._data_l = kwargs.get("data_l", 0)
@@ -54,11 +60,11 @@ class ModelDualBoost(ModelBase):
 
             X_1 = ModelDualBoost._data_part(X, int(float(self._data_l) * self._model1_fract))
             Y_1 = ModelDualBoost._data_part(Y, int(float(self._data_l) * self._model1_fract))
-            if aggr_level > 0:
+            if self.aggr_level > 0:
                 X_1_handler = ArrayHandler()
                 Y_1_handler = ArrayHandler()
-                X_1 = X_1_handler.aggregate(X_1, aggr_level=aggr_level)
-                Y_1 = Y_1_handler.aggregate(Y_1, aggr_level=aggr_level)
+                X_1 = X_1_handler.aggregate(X_1, aggr_level=self.aggr_level)
+                Y_1 = Y_1_handler.aggregate(Y_1, aggr_level=self.aggr_level)
             self.model1.fit(X=X_1, Y=Y_1)
             if dump_scheme_path is not None:
                 try:
@@ -66,10 +72,10 @@ class ModelDualBoost(ModelBase):
                 except:
                     print("WARNING: model1 dump failed")
 
-        X = self._get_model2_data(X=X, aggr_level=aggr_level)
-        if aggr_level > 0:
+        X = self._get_model2_data(X=X, aggr_level=self.aggr_level)
+        if self.aggr_level > 0:
             X_handler= ArrayHandler()
-            X = X_handler.aggregate(X, aggr_level=aggr_level)
+            X = X_handler.aggregate(X, aggr_level=self.aggr_level)
         self.model2.fit(X=X, Y=Y)
 
         if dump_scheme_path is not None:
@@ -87,7 +93,7 @@ class ModelDualBoost(ModelBase):
                 break
             yield d
 
-    def predict(self, X, aggr_level=0, **kwargs):
+    def predict(self, X, aggr_level=None, **kwargs):
         """
 
         :param X: features data
@@ -96,10 +102,13 @@ class ModelDualBoost(ModelBase):
         :param kwargs:
         :return:
         """
-        X = self._get_model2_data(X=X, aggr_level=aggr_level)
-        if aggr_level > 0:
+        if aggr_level is not None:
+            self.aggr_level = aggr_level
+
+        X = self._get_model2_data(X=X, aggr_level=self.aggr_level)
+        if self.aggr_level > 0:
             X_handler = ArrayHandler()
-            X = X_handler.aggregate(X, aggr_level=aggr_level)
+            X = X_handler.aggregate(X, aggr_level=self.aggr_level)
             return group_array(self.model2.predict(X=X), group_lims=X_handler.group_lims)
         else:
             return self.model2.predict(X=X)
