@@ -43,7 +43,6 @@ class ModelCatBoost(ArrayModelBase):
         X, data_shape = super(ModelCatBoost, self).predict(X=X, **kwargs)
         print("got features array shape")
         data = self.np_array(X, data_shape)
-        # self._labels["diagnosis_source_code"] = 15###
         return list(map(lambda p: dict((self.labels[i],
                                         p[i]**(1.0/self.label_weights[self.labels[i]])) for i in range(len(p))),
                         self.model.predict(data=pd.DataFrame(data).values, prediction_type="Probability")))

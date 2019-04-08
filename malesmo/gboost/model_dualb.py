@@ -61,10 +61,10 @@ class ModelDualBoost(ModelBase):
             X_1 = ModelDualBoost._data_part(X, int(float(self._data_l) * self._model1_fract))
             Y_1 = ModelDualBoost._data_part(Y, int(float(self._data_l) * self._model1_fract))
             if self.aggr_level > 0:
-                X_1_handler = ArrayHandler()
-                Y_1_handler = ArrayHandler()
-                X_1 = X_1_handler.aggregate(X_1, aggr_level=self.aggr_level)
-                Y_1 = Y_1_handler.aggregate(Y_1, aggr_level=self.aggr_level)
+                data1_handler = ArrayHandler()
+                Y_1 = data1_handler.aggregate(Y_1, aggr_level=self.aggr_level)
+                data1_handler.group_lims = None
+                X_1 = data1_handler.aggregate(X_1, aggr_level=self.aggr_level)
             self.model1.fit(X=X_1, Y=Y_1)
             if dump_scheme_path is not None:
                 try:
@@ -74,8 +74,10 @@ class ModelDualBoost(ModelBase):
 
         X = self._get_model2_data(X=X, aggr_level=self.aggr_level)
         if self.aggr_level > 0:
-            X_handler= ArrayHandler()
-            X = X_handler.aggregate(X, aggr_level=self.aggr_level)
+            data2_handler= ArrayHandler()
+            Y = data2_handler.aggregate(Y, aggr_level=self.aggr_level)
+            data2_handler.group_lims = None
+            X = data2_handler.aggregate(X, aggr_level=self.aggr_level)
         self.model2.fit(X=X, Y=Y)
 
         if dump_scheme_path is not None:
@@ -91,6 +93,7 @@ class ModelDualBoost(ModelBase):
         for d in data:
             if l >= part_l:
                 break
+            l += 1
             yield d
 
     def predict(self, X, aggr_level=None, **kwargs):
@@ -131,21 +134,27 @@ class ModelDualBoost(ModelBase):
     def str_to_factors(self, X):
         pass
 
-    def validate(self, X_test, Y_test, labels_to_remove=None, aggr_level=0):
-        X_test = self._get_model2_data(X=X_test,aggr_level=aggr_level)
-        if aggr_level > 0:
-            X_test_handler = ArrayHandler()
-            Y_test_handler = ArrayHandler()
-            X_test = X_test_handler.aggregate(X_test, aggr_level=aggr_level)
-            Y_test = Y_test_handler.aggregate(Y_test, aggr_level=aggr_level)
+    def validate(self, X_test, Y_test, labels_to_remove=None, aggr_level=None):
+        if aggr_level is not None:
+            self.aggr_level = aggr_level
+
+        X_test = self._get_model2_data(X=X_test,aggr_level=self.aggr_level)
+        if self.aggr_level > 0:
+            data_handler = ArrayHandler()
+            Y_test = data_handler.aggregate(Y_test, aggr_level=self.aggr_level)
+            data_handler.group_lims = None
+            X_test = data_handler.aggregate(X_test, aggr_level=self.aggr_level)
         return self.model2.validate(X_test=X_test, Y_test=Y_test, labels_to_remove=labels_to_remove)
 
-    def validate_model1(self, X_test, Y_test, labels_to_remove=None, aggr_level=0):
-        if aggr_level > 0:
-            X_test_handler = ArrayHandler()
-            Y_test_handler = ArrayHandler()
-            X_test = X_test_handler.aggregate(X_test, aggr_level=aggr_level)
-            Y_test = Y_test_handler.aggregate(Y_test, aggr_level=aggr_level)
+    def validate_model1(self, X_test, Y_test, labels_to_remove=None, aggr_level=None):
+        if aggr_level is not None:
+            self.aggr_level = aggr_level
+
+        if self.aggr_level > 0:
+            data_handler = ArrayHandler()
+            Y_test = data_handler.aggregate(Y_test, aggr_level=self.aggr_level)
+            data_handler.group_lims = None
+            X_test = data_handler.aggregate(X_test, aggr_level=self.aggr_level)
         return self.model1.validate(X_test=X_test, Y_test=Y_test, labels_to_remove=labels_to_remove)
 
     def validate_model2(self, X_test, Y_test, labels_to_remove=None, aggr_level=0):
