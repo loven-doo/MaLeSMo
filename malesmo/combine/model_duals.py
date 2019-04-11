@@ -7,7 +7,7 @@ from malemba import ModelBase
 from malemba.ds_tools import ArrayHandler, group_array
 
 
-class ModelDualBoost(ModelBase):
+class ModelDualStage(ModelBase):
 
     def __init__(self, model1, model2, concat_method, params1=None, params2=None, **kwargs):
         """
@@ -29,26 +29,30 @@ class ModelDualBoost(ModelBase):
             raise (TypeError, "Error: a value for 'concat_method' argument must be a function")
         self.params1 = params1
         self.params2 = params2
-        super(ModelDualBoost, self).__init__(params=None, **kwargs)
-        self.aggr_level = kwargs.get("aggr_level", 0)
+        super(ModelDualStage, self).__init__(params=None, **kwargs)
+        self.aggr_level1 = kwargs.get("aggr_level1", 0)
+        self.aggr_level2 = kwargs.get("aggr_level2", 0)
         self._data_l = 0
         self._model1_fract = 0.0
 
-    def fit(self, X, Y, model1_fract=0.0, aggr_level=None, dump_scheme_path=None, **kwargs):
+    def fit(self, X, Y, model1_fract=0.0, aggr_level1=None, aggr_level2=None, dump_scheme_path=None, **kwargs):
         """
 
         :param X: features data
         :param Y: labels data
         :param model1_fract: the fraction of data is to be used for model1 training
-        :param aggr_level: number of aggregation steps to turn the input data into one dimensional array
+        :param aggr_level1: number of aggregation steps to turn the input data into appropriate for model1 input
+        :param aggr_level2: number of aggregation steps to turn the input data into appropriate for model2 input
         :param dump_scheme_path: The path for models dump
         :param kwargs:
         :return:
         """
-        super(ModelDualBoost, self).fit(X=X, Y=Y, **kwargs)
+        super(ModelDualStage, self).fit(X=X, Y=Y, **kwargs)
 
-        if aggr_level is not None:
-            self.aggr_level = aggr_level
+        if aggr_level1 is not None:
+            self.aggr_level1 = aggr_level1
+        if aggr_level2 is not None:
+            self.aggr_level2 = aggr_level2
 
         if model1_fract > 0.0:
             self._model1_fract = model1_fract
@@ -58,13 +62,13 @@ class ModelDualBoost(ModelBase):
                 for y in Y_l:
                     self._data_l += 1
 
-            X_1 = ModelDualBoost._data_part(X, int(float(self._data_l) * self._model1_fract))
-            Y_1 = ModelDualBoost._data_part(Y, int(float(self._data_l) * self._model1_fract))
-            if self.aggr_level > 0:
+            X_1 = ModelDualStage._data_part(X, int(float(self._data_l) * self._model1_fract))
+            Y_1 = ModelDualStage._data_part(Y, int(float(self._data_l) * self._model1_fract))
+            if self.aggr_level1 > 0:
                 data1_handler = ArrayHandler()
-                Y_1 = data1_handler.aggregate(Y_1, aggr_level=self.aggr_level)
+                Y_1 = data1_handler.aggregate(Y_1, aggr_level=self.aggr_level1)
                 data1_handler.group_lims = None
-                X_1 = data1_handler.aggregate(X_1, aggr_level=self.aggr_level)
+                X_1 = data1_handler.aggregate(X_1, aggr_level=self.aggr_level1)
             self.model1.fit(X=X_1, Y=Y_1)
             if dump_scheme_path is not None:
                 try:
@@ -72,12 +76,12 @@ class ModelDualBoost(ModelBase):
                 except:
                     print("WARNING: model1 dump failed")
 
-        X = self._get_model2_data(X=X, aggr_level=self.aggr_level)
-        if self.aggr_level > 0:
+        X = self._get_model2_data(X=X, aggr_level=self.aggr_level1)
+        if self.aggr_level2 > 0:
             data2_handler= ArrayHandler()
-            Y = data2_handler.aggregate(Y, aggr_level=self.aggr_level)
+            Y = data2_handler.aggregate(Y, aggr_level=self.aggr_level2)
             data2_handler.group_lims = None
-            X = data2_handler.aggregate(X, aggr_level=self.aggr_level)
+            X = data2_handler.aggregate(X, aggr_level=self.aggr_level2)
         self.model2.fit(X=X, Y=Y)
 
         if dump_scheme_path is not None:
@@ -96,22 +100,24 @@ class ModelDualBoost(ModelBase):
             l += 1
             yield d
 
-    def predict(self, X, aggr_level=None, **kwargs):
+    def predict(self, X, aggr_level1=None, aggr_level2=None, **kwargs):
         """
 
         :param X: features data
         :param concat_method: the function to be used to concatinate X and model1 prediction for model2 input
-        :param aggr_level: number of aggregation steps to turn the input data into one dimensional array
+        :param aggr_level1: number of aggregation steps to turn the input data into one dimensional array
         :param kwargs:
         :return:
         """
-        if aggr_level is not None:
-            self.aggr_level = aggr_level
+        if aggr_level1 is not None:
+            self.aggr_level1 = aggr_level1
+        if aggr_level2 is not None:
+            self.aggr_level2 = aggr_level2
 
-        X = self._get_model2_data(X=X, aggr_level=self.aggr_level)
-        if self.aggr_level > 0:
+        X = self._get_model2_data(X=X, aggr_level=self.aggr_level1)
+        if self.aggr_level2 > 0:
             X_handler = ArrayHandler()
-            X = X_handler.aggregate(X, aggr_level=self.aggr_level)
+            X = X_handler.aggregate(X, aggr_level=self.aggr_level2)
             return group_array(self.model2.predict(X=X), group_lims=X_handler.group_lims)
         else:
             return self.model2.predict(X=X)
@@ -134,31 +140,37 @@ class ModelDualBoost(ModelBase):
     def str_to_factors(self, X):
         pass
 
-    def validate(self, X_test, Y_test, labels_to_remove=None, aggr_level=None):
-        if aggr_level is not None:
-            self.aggr_level = aggr_level
+    def validate(self, X_test, Y_test, labels_to_remove=None, aggr_level1=None, aggr_level2=None):
+        if aggr_level1 is not None:
+            self.aggr_level1 = aggr_level1
+        if aggr_level2 is not None:
+            self.aggr_level2 = aggr_level2
 
-        X_test = self._get_model2_data(X=X_test,aggr_level=self.aggr_level)
-        if self.aggr_level > 0:
+        X_test = self._get_model2_data(X=X_test, aggr_level=self.aggr_level1)
+        if self.aggr_level1 > 0:
             data_handler = ArrayHandler()
-            Y_test = data_handler.aggregate(Y_test, aggr_level=self.aggr_level)
+            Y_test = data_handler.aggregate(Y_test, aggr_level=self.aggr_level2)
             data_handler.group_lims = None
-            X_test = data_handler.aggregate(X_test, aggr_level=self.aggr_level)
+            X_test = data_handler.aggregate(X_test, aggr_level=self.aggr_level2)
         return self.model2.validate(X_test=X_test, Y_test=Y_test, labels_to_remove=labels_to_remove)
 
     def validate_model1(self, X_test, Y_test, labels_to_remove=None, aggr_level=None):
         if aggr_level is not None:
-            self.aggr_level = aggr_level
+            self.aggr_level1 = aggr_level
 
-        if self.aggr_level > 0:
+        if self.aggr_level1 > 0:
             data_handler = ArrayHandler()
-            Y_test = data_handler.aggregate(Y_test, aggr_level=self.aggr_level)
+            Y_test = data_handler.aggregate(Y_test, aggr_level=self.aggr_level1)
             data_handler.group_lims = None
-            X_test = data_handler.aggregate(X_test, aggr_level=self.aggr_level)
+            X_test = data_handler.aggregate(X_test, aggr_level=self.aggr_level1)
         return self.model1.validate(X_test=X_test, Y_test=Y_test, labels_to_remove=labels_to_remove)
 
-    def validate_model2(self, X_test, Y_test, labels_to_remove=None, aggr_level=0):
-        return self.validate(X_test=X_test, Y_test=Y_test, labels_to_remove=labels_to_remove, aggr_level=aggr_level)
+    def validate_model2(self, X_test, Y_test, labels_to_remove=None, aggr_level1=None, aggr_level2=None):
+        return self.validate(X_test=X_test,
+                             Y_test=Y_test,
+                             labels_to_remove=labels_to_remove,
+                             aggr_level1=aggr_level1,
+                             aggr_level2=aggr_level2)
 
     def dump(self, scheme_path, **kwargs):
         if not os.path.exists(scheme_path):
@@ -178,17 +190,29 @@ class ModelDualBoost(ModelBase):
     def load(cls, scheme_path, params1=None, params2=None, **kwargs):
         with open(os.path.join(scheme_path, "meta.m"), "rb") as meta_f:
             meta_dict = dill.load(meta_f)
-        meta_dict["params1"].update(params1)
-        meta_dict["params2"].update(params2)
+        if params1 is not None:
+            if meta_dict["param1"] is not None:
+                meta_dict["params1"].update(params1)
+            else:
+                meta_dict["params1"] = params1
+        if params2 is not None:
+            if meta_dict["param2"] is not None:
+                meta_dict["params2"].update(params2)
+            else:
+                meta_dict["params2"] = params2
         model1 = meta_dict["_model1_class"].load(scheme_path=os.path.join(scheme_path, "model1"),
                                                  params=meta_dict["params1"],
                                                  **kwargs)
         model2 = meta_dict["_model2_class"].load(scheme_path=os.path.join(scheme_path, "model2"),
                                                  params=meta_dict["params2"],
                                                  **kwargs)
-        model_dual_boost = cls(model1=model1, model2=model2, params1=params1, params2=params2)
-        model_dual_boost.__dict__.update(meta_dict)
-        return model_dual_boost
+        model_dual_stage = cls(model1=model1,
+                               model2=model2,
+                               concat_method=meta_dict["concat_method"],
+                               params1=params1,
+                               params2=params2)
+        model_dual_stage.__dict__.update(meta_dict)
+        return model_dual_stage
 
     @property
     def num_threads(self):
@@ -233,3 +257,4 @@ class ModelDualBoost(ModelBase):
             for label in self.model2.label_freqs:
                 self._label_freqs[label] += self.model2.label_freqs[label] * (1.0-self._model1_fract)
         return self._label_freqs
+
