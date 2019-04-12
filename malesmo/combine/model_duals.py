@@ -2,6 +2,7 @@ import os
 import dill
 from copy import deepcopy
 from itertools import tee
+from abc import ABCMeta, abstractmethod
 
 from malemba import ModelBase
 from malemba.ds_tools import ArrayHandler, group_array
@@ -9,12 +10,19 @@ from malemba.ds_tools import ArrayHandler, group_array
 
 class ModelDualStage(ModelBase):
 
-    def __init__(self, model1, model2, concat_method, params1=None, params2=None, **kwargs):
+    class Concatenator(object, metaclass=ABCMeta):
+
+        @abstractmethod
+        def concatenate(self, X, Y):
+            return
+
+    def __init__(self, model1, model2, concatenator, params1=None, params2=None, **kwargs):
         """
 
         :param model1: Boosting model object inherited from malemba.ArrayModelBase that is the first to be applied
         :param model2: Boosting model object inherited from malemba.ArrayModelBase that is the to be applied over model1
-        :param concat_method: the function to be used to concatinate X and model1 prediction for model2 input
+        :param concatenator: the object inherited from Concatenator class to be used to concatinate X and
+             model1 prediction for model2 input
         :param params1: parameters dict for model1
         :param params2: parameters dict for model2
         :param kwargs:
@@ -22,11 +30,15 @@ class ModelDualStage(ModelBase):
 
         self.model1 = model1
         self.model2 = model2
+        assert isinstance(self.model1, ModelBase), \
+            "Error: a value for model1 argument must be an object inherited from malemba.ModelBase"
+        assert isinstance(self.model2, ModelBase), \
+            "Error: a value for model2 argument must be an object inherited from malemba.ModelBase"
         self._model1_class = self.model1.__class__
         self._model2_class = self.model2.__class__
-        self.concat_method = concat_method
-        if not callable(concat_method):
-            raise (TypeError, "Error: a value for 'concat_method' argument must be a function")
+        self.concatenator = concatenator
+        assert isinstance(concatenator, ModelDualStage.Concatenator), \
+            "Error: a value for 'concatenator' argument must be an object inherited from ModelDualStage.Concatenator"
         self.params1 = params1
         self.params2 = params2
         super(ModelDualStage, self).__init__(params=None, **kwargs)
@@ -131,7 +143,7 @@ class ModelDualStage(ModelBase):
         else:
             model1_pred = self.model1.predict(X=X_1)
 
-        return self.concat_method(X, model1_pred)
+        return self.concatenator.concatenate(X, model1_pred)
 
     @staticmethod
     def _convert_str_to_factors():
@@ -208,7 +220,7 @@ class ModelDualStage(ModelBase):
                                                  **kwargs)
         model_dual_stage = cls(model1=model1,
                                model2=model2,
-                               concat_method=meta_dict["concat_method"],
+                               concatenator=meta_dict["concatenator"],
                                params1=params1,
                                params2=params2)
         model_dual_stage.__dict__.update(meta_dict)
@@ -257,4 +269,3 @@ class ModelDualStage(ModelBase):
             for label in self.model2.label_freqs:
                 self._label_freqs[label] += self.model2.label_freqs[label] * (1.0-self._model1_fract)
         return self._label_freqs
-
