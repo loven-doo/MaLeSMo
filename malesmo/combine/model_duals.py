@@ -187,11 +187,13 @@ class ModelDualStage(ModelBase):
     def dump(self, scheme_path, **kwargs):
         if not os.path.exists(scheme_path):
             os.makedirs(scheme_path)
-        meta_dict = deepcopy(self.__dict__)
-        del meta_dict["model1"], meta_dict["model2"]
+        model1 = self.__dict__.pop("model1")
+        model2 = self.__dict__.pop("model2")
         meta_f = open(os.path.join(scheme_path, "meta.m"), "wb")
-        dill.dump(meta_dict, meta_f)
+        dill.dump(self.__dict__, meta_f)
         meta_f.close()
+        self.model1 = model1
+        self.model2 = model2
 
         if kwargs.get("only_meta", False):
             return

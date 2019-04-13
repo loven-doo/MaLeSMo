@@ -41,11 +41,11 @@ class ModelXGB(ArrayModelBase):
     def dump(self, scheme_path, **kwargs):
         if not os.path.exists(scheme_path):
             os.makedirs(scheme_path)
-        meta_dict = deepcopy(self.__dict__)
-        del meta_dict["model"]
+        model = self.__dict__.pop("model")
         meta_f = open(os.path.join(scheme_path, "meta.m"), "wb")
-        dill.dump(meta_dict, meta_f)
+        dill.dump(self.__dict__, meta_f)
         meta_f.close()
+        self.model = model
 
         self.model.save_model(fname=os.path.join(scheme_path, "model.m"))
 
