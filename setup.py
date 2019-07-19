@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='MaLeSMo',
-    version='0.2.1',
+    version='0.2.3',
     author="Denis Moshensky",
     author_email="loven7doo@gmail.com",  
     description="Machine Learning Standard Models",
@@ -26,7 +26,8 @@ setup(
         'dill >= 0.2.9',
         'malemba >= 0.4.5',
         'catboost >= 0.12.2',
-        'xgboost >= 0.81'
+        'xgboost >= 0.81',
+        'jsondler >= 0.0.1'
     ],
     entry_points={
         'console_scripts': []

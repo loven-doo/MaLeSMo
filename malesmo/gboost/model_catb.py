@@ -3,6 +3,8 @@ import dill
 from copy import deepcopy
 from collections import defaultdict
 
+from jsondler import JsonEntry
+
 import numpy as np
 import pandas as pd
 from malemba import ArrayModelBase
@@ -91,3 +93,63 @@ class ModelCatBoost(ArrayModelBase):
                 else:
                     x_cat[feat] = x[feat]
             yield x_cat
+
+
+class CatBoostParams(JsonEntry):
+
+    method_name = "CatBoost"
+
+    max_depth_key = "max_depth"
+    n_estimators_key = "n_estimators_key"
+    eta_key = "eta"
+    reg_lambda_key = "reg_lambda"
+    objective_key = "objective"
+    thread_count_key = "thread_count"
+    task_type_key = "task_type"
+
+    max_depth_0 = 6
+    n_estimators_0 = 1000
+    eta_0 = 0.1
+    reg_lambda_0 = 3
+    objective_0 = 'MultiClass'
+    thread_count_0 = NUM_THREADS
+    task_type_0 = "CPU"
+
+    def __init__(self,
+                 max_depth=max_depth_0,
+                 n_estimators=n_estimators_0,
+                 eta=eta_0,
+                 reg_lambda=reg_lambda_0,
+                 objective=None,
+                 thread_count=thread_count_0,
+                 task_type=None):
+
+        if task_type is None:
+            task_type = self.task_type_0
+        if objective is None:
+            objective = self.objective_0
+
+        self.max_depth = max_depth
+        self.n_estimators = n_estimators
+        self.eta = eta
+        self.reg_lambda = reg_lambda
+        self.objective = objective
+        self.thread_count = thread_count
+        self.task_type = task_type
+
+    @classmethod
+    def attr_scheme(cls):
+        attr_scheme = {
+            "max_depth": (cls.max_depth_key,),
+            "n_estimators": (cls.n_estimators_key,),
+            "eta": (cls.eta_key,),
+            "reg_lambda": (cls.reg_lambda_key,),
+            "objective": (cls.objective_key,),
+            "thread_count": (cls.thread_count_key,),
+            "task_type": (cls.task_type_key,),
+        }
+        return attr_scheme
+
+    @property
+    def params(self):
+        return super(CatBoostParams, self).get_json()
