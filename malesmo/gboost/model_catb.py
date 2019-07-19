@@ -99,7 +99,7 @@ class CatBoostParams(JsonEntry):
     method_name = "CatBoost"
 
     max_depth_key = "max_depth"
-    n_estimators_key = "n_estimators_key"
+    n_estimators_key = "n_estimators"
     eta_key = "eta"
     reg_lambda_key = "reg_lambda"
     objective_key = "objective"
