@@ -4,7 +4,6 @@ from copy import deepcopy
 from collections import defaultdict
 
 from jsondler import JsonEntry
-
 import numpy as np
 import pandas as pd
 from malemba import ArrayModelBase
