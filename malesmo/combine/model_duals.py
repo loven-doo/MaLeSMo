@@ -88,13 +88,17 @@ class ModelDualStage(ModelBase):
                 except:
                     print("WARNING: model1 dump failed")
 
-        X = self._get_model2_data(X=X, aggr_level=self.aggr_level1)
-        if self.aggr_level2 > 0:
-            data2_handler= ArrayHandler()
-            Y = data2_handler.aggregate(Y, aggr_level=self.aggr_level2)
-            data2_handler.group_lims = None
-            X = data2_handler.aggregate(X, aggr_level=self.aggr_level2)
-        self.model2.fit(X=X, Y=Y)
+        if self._model1_fract >= 1.0:
+            print("WARNING: model1 fraction >= 1.0 - model2 is model1")
+            self.model2 = self.model1
+        else:
+            X = self._get_model2_data(X=X, aggr_level=self.aggr_level1)
+            if self.aggr_level2 > 0:
+                data2_handler= ArrayHandler()
+                Y = data2_handler.aggregate(Y, aggr_level=self.aggr_level2)
+                data2_handler.group_lims = None
+                X = data2_handler.aggregate(X, aggr_level=self.aggr_level2)
+            self.model2.fit(X=X, Y=Y)
 
         if dump_scheme_path is not None:
             try:
