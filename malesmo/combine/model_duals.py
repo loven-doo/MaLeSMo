@@ -209,12 +209,12 @@ class ModelDualStage(ModelBase):
         with open(os.path.join(scheme_path, "meta.m"), "rb") as meta_f:
             meta_dict = dill.load(meta_f)
         if params1 is not None:
-            if meta_dict["param1"] is not None:
+            if meta_dict["params1"] is not None:
                 meta_dict["params1"].update(params1)
             else:
                 meta_dict["params1"] = params1
         if params2 is not None:
-            if meta_dict["param2"] is not None:
+            if meta_dict["params2"] is not None:
                 meta_dict["params2"].update(params2)
             else:
                 meta_dict["params2"] = params2
